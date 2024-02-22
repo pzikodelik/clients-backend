@@ -54,6 +54,16 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-boot-starter</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger-ui</artifactId>
+            <version>3.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -76,6 +86,7 @@
                     <excludes>
                         <exclude>com/ironbrain/clients/backend/dto/*</exclude>
                         <exclude>com/ironbrain/clients/backend/model/*</exclude>
+                        <exclude>com/ironbrain/clients/backend/config/*</exclude>
                         <exclude>com/ironbrain/clients/backend/exception/*</exclude>
                         <exclude>com/ironbrain/clients/backend/ClientsBackendApplication.class</exclude>
                     </excludes>

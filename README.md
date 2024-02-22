@@ -18,11 +18,23 @@
 11. Docker
 12. Postgres SQL
 
+*****
+
+## Swagger UI URL
+> http://localhost:8080/swagger-ui/
+
 ****
 
 ## Plugins
 1. Jacoco Coverage
 2. SonarQube
+
+****
+
+## Generate Jacoco Report
+> <code>mvn clean verify</code>
+> 
+> NOTE: You can see the report into **target/site/index.html**, you can open this in browser.
 
 ****
 
