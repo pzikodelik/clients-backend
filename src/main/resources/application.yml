@@ -10,3 +10,9 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         id:
           new_generator_mappings: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info, health, metrics, prometheus

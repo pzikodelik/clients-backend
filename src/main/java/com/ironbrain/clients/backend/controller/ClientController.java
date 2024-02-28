@@ -8,11 +8,15 @@ import com.ironbrain.clients.backend.exception.NotFoundException;
 import com.ironbrain.clients.backend.model.Client;
 import com.ironbrain.clients.backend.service.ClientService;
 import com.ironbrain.clients.backend.validation.ClientRequestValidator;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.websocket.server.PathParam;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +39,7 @@ public class ClientController {
     private ClientService clientService;
     private ClientRequestValidator clientRequestValidator;
 
+    @Timed(value = "client.save")
     @PostMapping(path = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> save(@RequestBody ClientRequest clientRequest) {
         try {
@@ -74,6 +79,7 @@ public class ClientController {
         }
     }
 
+    @Timed(value = "client.updateById")
     @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> updateById(@RequestBody ClientRequest clientRequest, @PathVariable Long id) {
         try {
@@ -114,6 +120,7 @@ public class ClientController {
         }
     }
 
+    @Timed(value = "client.findById")
     @GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> findById(@PathVariable Long id) {
 
@@ -146,9 +153,11 @@ public class ClientController {
                 );
     }
 
+    @Timed(value = "client.findByUsernameAndPassword")
     @PostMapping(path = "/findByUsernameAndPassword", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> findByUsernameAndPassword(@RequestBody ClientRequest clientRequest) {
         try {
+
             clientRequestValidator.validateUsernameAndPasswordRequest(clientRequest);
 
             Optional<Client> clientResult = clientService.findByUsernameAndPassword(clientRequest.getUsername(), clientRequest.getPassword());
@@ -184,6 +193,7 @@ public class ClientController {
         }
     }
 
+    @Timed(value = "client.activateAndDeactivateById")
     @PutMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> activateAndDeactivateById(@PathVariable Long id) {
         try {
@@ -214,6 +224,7 @@ public class ClientController {
         }
     }
 
+    @Timed(value = "client.findAll")
     @GetMapping(value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> findAll() {
 
@@ -247,6 +258,41 @@ public class ClientController {
         }
     }
 
+    @Timed(value = "client.findAll.paged")
+    @GetMapping(value = "/paged", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> findAllPaged(@PathParam(value = "page") int page, @PathParam(value = "size") int size) {
+
+        Page<Client> clientsResult = clientService.findAllPaged(page, size);
+
+        if (clientsResult.isEmpty()) {
+            return new ResponseEntity<>(
+                    ClientResponse.builder()
+                            .message("There aren't clients !!!")
+                            .build(),
+                    HttpStatus.NOT_FOUND
+            );
+        } else {
+            return new ResponseEntity<>(
+                    ListClientResponse.builder()
+                            .body( clientsResult.stream().map(
+                                    client -> ClientResponseBody.builder()
+                                            .id(client.getId())
+                                            .firstName(client.getFirstName())
+                                            .middleName(client.getMiddleName())
+                                            .lastName(client.getLastName())
+                                            .email(client.getEmail())
+                                            .username(client.getUsername())
+                                            .password(client.getPassword())
+                                            .isActive(client.getIsActive())
+                                            .build()
+                            ).collect(Collectors.toList()))
+                            .message("Clients founded successfully !!!")
+                            .build(),
+                    HttpStatus.OK);
+        }
+    }
+
+    @Timed(value = "client.deleteById")
     @DeleteMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> deleteById(@PathVariable Long id) {
         try {

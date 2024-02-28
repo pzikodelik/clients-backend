@@ -1,0 +1,140 @@
+version: '3.9'
+
+services:
+
+  jenkins:
+    image: jenkins/jenkins
+    container_name: jenkins
+    restart: always
+    ports:
+      - '8086:8080'
+      - '50000:50000'
+    volumes:
+      - jenkins:/var/jenkins_home
+
+  sonarqube:
+    image: sonarqube
+    container_name: sonarqube
+    restart: always
+    ports:
+      - '9000:9000'
+    volumes:
+      - sonarqube:/opt/sonarqube/data
+
+  postgresql:
+    image: postgres
+    container_name: postgres
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: clients-backend
+      POSTGRES_PASSWORD: P@ssw0rd
+      POSTGRES_USER: ylica
+    volumes:
+      - postgresql:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  mysql:
+    image: mysql:5.6
+    platform: linux/x86_64
+    container_name: mysql
+    restart: always
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_DATABASE: clients-backend-zipkins
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: ylica
+      MYSQL_PASSWORD: P@ssw0rd
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ylica
+      RABBITMQ_DEFAULT_PASS: P@ssw0rd
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - mysql
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    restart: always
+    ports:
+      - '9411:9411'
+    environment:
+      RABBIT_ADDRESSES: rabbitmq
+      RABBIT_USER: ylica
+      RABBIT_PASSWORD: P@ssw0rd
+      STORAGE_TYPE: mysql
+      MYSQL_DB: clients-backend-zipkins
+      MYSQL_HOST: mysql
+      MYSQL_USER: ylica
+      MYSQL_PASS: P@ssw0rd
+    depends_on:
+        rabbitmq:
+          condition: service_healthy
+        mysql:
+          condition: service_healthy
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - '8088:8080'
+    environment:
+      ADMINER_DESIGN: dracula
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: always
+    ports:
+      - '9091:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana:/usr/share/grafana
+
+volumes:
+  jenkins:
+  sonarqube:
+  postgresql:
+  mysql:
+  rabbitmq:
+  prometheus:
+  grafana:

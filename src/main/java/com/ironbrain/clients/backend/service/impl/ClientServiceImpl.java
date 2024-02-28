@@ -8,6 +8,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +54,12 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public Optional<Client> findByUsernameAndPassword(String username, String password) {
         return clientRepository.findClientByUsernameAndPassword(username, password);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<Client> findAllPaged(int page, int size) {
+        return clientRepository.findAll(PageRequest.of(page, size));
     }
 
     @Transactional(readOnly = true)
