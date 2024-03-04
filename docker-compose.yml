@@ -13,7 +13,8 @@ services:
       - jenkins:/var/jenkins_home
 
   sonarqube:
-    image: sonarqube
+    image: sonarqube:9.4-community
+    platform: linux/x86_64
     container_name: sonarqube
     restart: always
     ports:
@@ -56,6 +57,15 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis:/data
 
   rabbitmq:
     image: rabbitmq:management-alpine
@@ -135,6 +145,7 @@ volumes:
   sonarqube:
   postgresql:
   mysql:
+  redis:
   rabbitmq:
   prometheus:
   grafana:

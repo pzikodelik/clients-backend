@@ -6,7 +6,7 @@ import com.ironbrain.clients.backend.model.Client;
 import com.ironbrain.clients.backend.service.ClientService;
 import com.ironbrain.clients.backend.validation.ClientRequestValidator;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,10 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpServerErrorException;
 
 @ExtendWith(MockitoExtension.class)
 class ClientControllerTest {
@@ -55,6 +58,18 @@ class ClientControllerTest {
 
         Assertions.assertTrue(result.hasBody());
         Assertions.assertTrue(result.getStatusCode().is2xxSuccessful());
+    }
+
+    @Test
+    void saveException() {
+
+        Mockito.when(service.save(Mockito.any())).thenThrow(HttpServerErrorException.InternalServerError.class);
+        Mockito.doNothing().when(validator).validatePostAndPutRequest(Mockito.any());
+
+        ResponseEntity<?> result = controller.save(clientRequest);
+
+        Assertions.assertTrue(result.hasBody());
+        Assertions.assertTrue(result.getStatusCode().is5xxServerError());
     }
 
     @Test
@@ -134,7 +149,7 @@ class ClientControllerTest {
     @Test
     void findById() {
 
-        Mockito.when(service.findById(Mockito.anyLong())).thenReturn(Optional.of(new Client()));
+        Mockito.when(service.findById(Mockito.anyLong())).thenReturn(new Client());
 
         ResponseEntity<?> result = controller.findById(1L);
 
@@ -145,7 +160,7 @@ class ClientControllerTest {
     @Test
     void findByIdNotFound() {
 
-        Mockito.when(service.findById(Mockito.anyLong())).thenReturn(Optional.empty());
+        Mockito.when(service.findById(Mockito.anyLong())).thenThrow(NotFoundException.class);
 
         ResponseEntity<?> result = controller.findById(1L);
 
@@ -156,7 +171,7 @@ class ClientControllerTest {
     @Test
     void findByUsernameAndPassword() {
 
-        Mockito.when(service.findByUsernameAndPassword(Mockito.anyString(), Mockito.anyString())).thenReturn(Optional.of(new Client()));
+        Mockito.when(service.findByUsernameAndPassword(Mockito.anyString(), Mockito.anyString())).thenReturn(new Client());
 
         Mockito.doNothing().when(validator).validateUsernameAndPasswordRequest(Mockito.any());
 
@@ -169,7 +184,7 @@ class ClientControllerTest {
     @Test
     void findByUsernameAndPasswordNotFound() {
 
-        Mockito.when(service.findByUsernameAndPassword(Mockito.anyString(), Mockito.anyString())).thenReturn(Optional.empty());
+        Mockito.when(service.findByUsernameAndPassword(Mockito.anyString(), Mockito.anyString())).thenThrow(NotFoundException.class);
 
         Mockito.doNothing().when(validator).validateUsernameAndPasswordRequest(Mockito.any());
 
@@ -241,9 +256,42 @@ class ClientControllerTest {
     }
 
     @Test
-    void findAllEmpty() {
+    void findAllException() {
+        Mockito.when(service.findAll()).thenThrow(HttpServerErrorException.InternalServerError.class);
 
-        Mockito.when(service.findAll()).thenReturn(List.of());
+        ResponseEntity<?> result = controller.findAll();
+
+        Assertions.assertTrue(result.hasBody());
+        Assertions.assertTrue(result.getStatusCode().is5xxServerError());
+    }
+
+    @Test
+    void findAllPage() {
+        Page<Client> clients = new PageImpl<>(List.of(new Client()));
+
+        Mockito.when(service.findAllPaged(Mockito.anyInt(), Mockito.anyInt())).thenReturn(clients);
+
+        ResponseEntity<?> result = controller.findAllPaged(1, 1);
+
+        Assertions.assertTrue(result.hasBody());
+        Assertions.assertTrue(result.getStatusCode().is2xxSuccessful());
+    }
+
+    @Test
+    void findAllPageNotFound() {
+
+        Mockito.when(service.findAllPaged(Mockito.anyInt(), Mockito.anyInt())).thenThrow(NotFoundException.class);
+
+        ResponseEntity<?> result = controller.findAllPaged(1, 1);
+
+        Assertions.assertTrue(result.hasBody());
+        Assertions.assertTrue(result.getStatusCode().is4xxClientError());
+    }
+
+    @Test
+    void findAllNotFound() {
+
+        Mockito.when(service.findAll()).thenThrow(NotFoundException.class);
 
         ResponseEntity<?> result = controller.findAll();
 

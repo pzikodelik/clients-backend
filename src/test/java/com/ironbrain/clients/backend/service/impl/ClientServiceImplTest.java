@@ -14,6 +14,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 class ClientServiceImplTest {
@@ -67,14 +70,29 @@ class ClientServiceImplTest {
 
         Mockito.when(repository.findById(1L)).thenReturn(Optional.of(client));
 
-        Assertions.assertTrue(clientService.findById(1L).isPresent());
+        Assertions.assertNotNull(clientService.findById(1L));
+    }
+
+    @Test
+    void findByIdNotFound() {
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.empty());
+
+        Assertions.assertThrows(NotFoundException.class,() -> clientService.findById(1L));
     }
 
     @Test
     void findByUsernameAndPassword() {
         Mockito.when(repository.findClientByUsernameAndPassword(Mockito.anyString(), Mockito.anyString())).thenReturn(Optional.of(client));
 
-        Assertions.assertTrue(clientService.findByUsernameAndPassword("", "").isPresent());
+        Assertions.assertNotNull(clientService.findByUsernameAndPassword("", ""));
+    }
+
+    @Test
+    void findByUsernameAndPasswordNotFound() {
+        Mockito.when(repository.findClientByUsernameAndPassword(Mockito.anyString(), Mockito.anyString())).thenReturn(Optional.empty());
+
+        Assertions.assertThrows(NotFoundException.class, () -> clientService.findByUsernameAndPassword("", ""));
     }
 
     @Test
@@ -86,6 +104,33 @@ class ClientServiceImplTest {
 
         Assertions.assertFalse(clients.isEmpty());
         Assertions.assertEquals(1, clients.size());
+    }
+
+    @Test
+    void findAllNotFound() {
+
+        Mockito.when(repository.findAll()).thenReturn(List.of());
+
+        Assertions.assertThrows(NotFoundException.class, () -> clientService.findAll());
+    }
+
+    @Test
+    void findAllPage() {
+
+        Mockito.when(repository.findAll(PageRequest.of(1, 1))).thenReturn(new PageImpl<>(List.of(new Client())));
+
+        Page<Client> clients = clientService.findAllPaged(1, 1);
+
+        Assertions.assertFalse(clients.isEmpty());
+        Assertions.assertEquals(1, clients.getContent().size());
+    }
+
+    @Test
+    void findAllPageNotFound() {
+
+        Mockito.when(repository.findAll(PageRequest.of(1, 1))).thenReturn(new PageImpl<>(List.of()));
+
+        Assertions.assertThrows(NotFoundException.class, () -> clientService.findAllPaged(1, 1));
     }
 
     @Test
@@ -134,15 +179,17 @@ class ClientServiceImplTest {
     @Test
     void deleteById() {
 
-        Mockito.when(repository.existsById(1L)).thenReturn(true);
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(new Client()));
 
         clientService.deleteById(1L);
+
+        Mockito.verify(repository).findById(1L);
     }
 
     @Test
-    void deleteByIdFail() {
+    void deleteByIdNotFound() {
 
-        Mockito.when(repository.existsById(1L)).thenReturn(false);
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(NotFoundException.class, () -> clientService.deleteById(1L));
     }
